@@ -28,7 +28,3 @@ Return each query on a new line.
     queries = response.content.split("\n")
 
     return [q.strip("- ").strip() for q in queries if q.strip()]
-
-queries = generate_queries("what does machine learning mean?")
-for i in queries: 
-    print(i, "\n")

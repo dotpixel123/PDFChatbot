@@ -1,6 +1,15 @@
-def main():
-    print("Hello from rag-system!")
+from generation.pipeline import rag_pipeline
 
+while True:
 
-if __name__ == "__main__":
-    main()
+    query = input("\nQuestion: ")
+
+    answer, chunks = rag_pipeline(query)
+
+    print("\nAnswer:\n")
+    print(answer)
+
+    print("\nRetrieved Context:\n")
+
+    for c in chunks:
+        print("-", c[:200])

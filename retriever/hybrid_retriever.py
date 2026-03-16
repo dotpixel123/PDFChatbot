@@ -3,7 +3,8 @@ from langchain_community.embeddings import HuggingFaceEmbeddings
 
 from rank_bm25 import BM25Okapi
 
-from query_expansion import generate_queries
+from retriever.query_expansion import generate_queries
+from retriever.reranker import rerank
 
 embeddings = HuggingFaceEmbeddings(
     model_name="BAAI/bge-small-en-v1.5"
@@ -45,30 +46,24 @@ def hybrid_search(query, k=5):
 
     return combined[:k]
 
-def multiquery_hybrid_search(query, k=5):
+def multiquery_hybrid_search(query):
 
+    # Step 1: generate alternative queries
     queries = generate_queries(query)
 
     all_results = []
 
+    # Step 2: run hybrid retrieval for each query
     for q in queries:
 
-        results = hybrid_search(q, k)
+        results = hybrid_search(q, k=20)   # retrieve more candidates
 
         all_results.extend(results)
 
-    # remove duplicates
+    # Step 3: remove duplicates
     unique_results = list(set(all_results))
 
-    return unique_results[:k]
+    # Step 4: rerank and keep top 5
+    reranked_results = rerank(query, unique_results, top_k=5)
 
-while True:
-
-    query = input("\nQuery: ")
-
-    results = multiquery_hybrid_search(query)
-
-    print("\nRetrieved chunks:\n")
-
-    for r in results:
-        print("-", r[:200])
+    return reranked_results
