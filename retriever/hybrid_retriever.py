@@ -1,0 +1,74 @@
+from langchain_chroma import Chroma
+from langchain_community.embeddings import HuggingFaceEmbeddings
+
+from rank_bm25 import BM25Okapi
+
+from query_expansion import generate_queries
+
+embeddings = HuggingFaceEmbeddings(
+    model_name="BAAI/bge-small-en-v1.5"
+)
+
+vectorstore = Chroma(
+    persist_directory="chroma_db",
+    embedding_function=embeddings
+)
+
+data = vectorstore._collection.get()
+
+documents = data["documents"]
+
+tokenized_docs = [doc.split() for doc in documents]
+
+bm25 = BM25Okapi(tokenized_docs)
+
+def hybrid_search(query, k=5):
+    vector_results = vectorstore.similarity_search(query, k=k)
+
+    vector_docs = [doc.page_content for doc in vector_results]
+
+    # BM25 search
+    tokenized_query = query.split()
+
+    bm25_scores = bm25.get_scores(tokenized_query)
+
+    bm25_indices = sorted(
+        range(len(bm25_scores)),
+        key=lambda i: bm25_scores[i],
+        reverse=True
+    )[:k]
+
+    bm25_docs = [documents[i] for i in bm25_indices]
+
+    # Merge results
+    combined = list(set(vector_docs + bm25_docs))
+
+    return combined[:k]
+
+def multiquery_hybrid_search(query, k=5):
+
+    queries = generate_queries(query)
+
+    all_results = []
+
+    for q in queries:
+
+        results = hybrid_search(q, k)
+
+        all_results.extend(results)
+
+    # remove duplicates
+    unique_results = list(set(all_results))
+
+    return unique_results[:k]
+
+while True:
+
+    query = input("\nQuery: ")
+
+    results = multiquery_hybrid_search(query)
+
+    print("\nRetrieved chunks:\n")
+
+    for r in results:
+        print("-", r[:200])
