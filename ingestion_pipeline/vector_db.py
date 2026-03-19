@@ -1,7 +1,7 @@
 from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain_community.vectorstores import Chroma
 
-from pdf_ingest import chunk_pdf
+from .pdf_ingest import load_and_chunk_documents
 
 PERSIST_DIR = "chroma_db"
 EMBEDDING_MODEL = "BAAI/bge-small-en-v1.5"
@@ -24,7 +24,7 @@ def get_vector_store():
 
 def create_vector_db():
 
-    chunks = chunk_pdf()
+    chunks = load_and_chunk_documents()
 
     embeddings = HuggingFaceEmbeddings(
         model_name=EMBEDDING_MODEL

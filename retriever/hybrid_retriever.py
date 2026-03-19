@@ -34,6 +34,13 @@ def _build_bm25():
     data = vectorstore._collection.get()
     documents = data.get("documents", [])
 
+    if not documents:
+        # No documents in the vector store yet.
+        _bm25 = None
+        _bm25_docs = []
+        _bm25_dirty = False
+        return
+
     tokenized_docs = [doc.split() for doc in documents]
 
     _bm25 = BM25Okapi(tokenized_docs)
@@ -74,6 +81,10 @@ def hybrid_search(query: str, k: int = 5) -> List[str]:
     vectorstore = get_vector_store()
     vector_results = vectorstore.similarity_search(query, k=k)
     vector_docs = [doc.page_content for doc in vector_results]
+
+    # If BM25 is not available (no documents), just return vector results
+    if _bm25 is None or not _bm25_docs:
+        return vector_docs[:k]
 
     # BM25 ranking
     tokenized_query = query.split()

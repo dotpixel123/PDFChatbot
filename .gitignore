@@ -1,3 +1,6 @@
 .venv/
 .cse_topics.pdf
 .env
+graham-essays/
+essays/
+chroma_db/
