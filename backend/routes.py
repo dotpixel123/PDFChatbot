@@ -2,7 +2,7 @@
 FastAPI routes for RAG system
 """
 
-from fastapi import APIRouter, UploadFile, File, HTTPException, BackgroundTasks
+from fastapi import APIRouter, UploadFile, File, HTTPException
 from fastapi.responses import StreamingResponse
 import os
 import tempfile
@@ -14,7 +14,7 @@ from backend.schemas import (
 )
 from backend.document_manager import DocumentManager
 from generation.pipeline import rag_pipeline
-from generation.generator import llm
+from ingestion_pipeline.vector_db import vector_store_is_empty
 
 router = APIRouter()
 doc_manager = DocumentManager(upload_dir="uploads")
@@ -44,8 +44,7 @@ async def answer_generator(query: str, conversation_history: list = None) -> Asy
 
 @router.post("/chat")
 async def chat(request: ChatRequest):
-    """
-    Main chat endpoint. Streams answer via Server-Sent Events.
+    """Main chat endpoint. Streams answer via Server-Sent Events.
     
     Args:
         request: ChatRequest with query and optional conversation_history
@@ -57,6 +56,13 @@ async def chat(request: ChatRequest):
         # Validate query
         if not request.query or not request.query.strip():
             raise HTTPException(status_code=400, detail="Query cannot be empty")
+        
+        # Check if database is empty
+        if vector_store_is_empty():
+            raise HTTPException(
+                status_code=400,
+                detail="Knowledge base is empty. Please upload documents first using the /upload endpoint."
+            )
         
         return StreamingResponse(
             answer_generator(request.query, request.conversation_history),

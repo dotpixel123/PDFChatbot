@@ -36,8 +36,7 @@ class DocumentManager:
             json.dump(self.registry, f, indent=2)
 
     def upload_document(self, file_path: str, file_size: int) -> Tuple[str, int]:
-        """
-        Upload a PDF document to the vector store.
+        """Upload a PDF document to the vector store.
 
         Args:
             file_path: Path to the uploaded file
@@ -55,18 +54,23 @@ class DocumentManager:
             raise ValueError(f"File {file_name} is not a PDF")
 
         try:
-            # Store file in uploads directory
-            dest_path = self.upload_dir / file_name
+            # Store file in uploads directory using Path for consistent cross-platform handling
+            dest_path = Path(self.upload_dir) / file_name
+            
             if os.path.exists(file_path):
-                shutil.copy(file_path, dest_path)
+                shutil.copy(file_path, str(dest_path))
 
-            # Load and chunk the document
-            chunks = load_and_chunk_documents(str(dest_path))
+            # Load and chunk the document - pass as posix path for consistency
+            chunks = load_and_chunk_documents(dest_path.as_posix())
             num_chunks = len(chunks)
+
+            if num_chunks == 0:
+                raise ValueError(f"No content extracted from {file_name}")
 
             # Add to vector store
             vector_store = get_vector_store()
-            vector_store.add_documents(chunks, ids=None)
+            vector_store.add_documents(chunks)
+            vector_store.persist()
             mark_bm25_dirty()
 
             # Update registry
@@ -74,7 +78,7 @@ class DocumentManager:
                 "uploaded_at": datetime.now().isoformat(),
                 "size": file_size,
                 "chunks": num_chunks,
-                "path": str(dest_path)
+                "path": dest_path.as_posix()
             }
             self._save_registry()
 
@@ -82,8 +86,11 @@ class DocumentManager:
 
         except Exception as e:
             # Clean up on failure
-            if os.path.exists(dest_path):
-                os.remove(dest_path)
+            try:
+                if dest_path.exists():
+                    dest_path.unlink()
+            except:
+                pass
             raise ValueError(f"Failed to process {file_name}: {str(e)}")
 
     def delete_document(self, document_name: str) -> int:
