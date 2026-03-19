@@ -3,18 +3,37 @@ from langchain_community.vectorstores import Chroma
 
 from pdf_ingest import chunk_pdf
 
+PERSIST_DIR = "chroma_db"
+EMBEDDING_MODEL = "BAAI/bge-small-en-v1.5"
+
+_vectorstore = None
+
+
+def get_vector_store():
+    """Return a singleton Chroma vector store instance."""
+
+    global _vectorstore
+    if _vectorstore is None:
+        embeddings = HuggingFaceEmbeddings(model_name=EMBEDDING_MODEL)
+        _vectorstore = Chroma(
+            persist_directory=PERSIST_DIR,
+            embedding_function=embeddings
+        )
+    return _vectorstore
+
+
 def create_vector_db():
 
     chunks = chunk_pdf()
 
     embeddings = HuggingFaceEmbeddings(
-        model_name="BAAI/bge-small-en-v1.5"
+        model_name=EMBEDDING_MODEL
     )
 
     vectorstore = Chroma.from_documents(
         documents=chunks,
         embedding=embeddings,
-        persist_directory="chroma_db"
+        persist_directory=PERSIST_DIR
     )
 
     vectorstore.persist()
