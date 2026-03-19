@@ -1,9 +1,11 @@
 """
-Main FastAPI application for RAG system backend
+Main FastAPI application for RAG system backend with web frontend.
 """
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
+from pathlib import Path
 from backend.routes import router
 
 # Initialize FastAPI app
@@ -16,24 +18,39 @@ app = FastAPI(
 # Configure CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Change to specific origin in production: ["http://localhost:3000"]
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Include routes
+# Include API routes
 app.include_router(router, tags=["rag"])
+
+frontend_path = Path(__file__).parent / "frontend" / "index.html"
 
 
 @app.get("/")
 async def root():
-    """Root endpoint with API documentation"""
+    """Serve the web frontend."""
+    if frontend_path.exists():
+        return FileResponse(frontend_path, media_type="text/html")
     return {
         "message": "RAG System API",
         "docs": "/docs",
-        "openapi": "/openapi.json"
+        "frontend": "Not available",
     }
+
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(
+        "main_api:app",
+        host="0.0.0.0",
+        port=8000,
+        reload=True
+    )
+
 
 
 if __name__ == "__main__":

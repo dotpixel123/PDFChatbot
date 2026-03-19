@@ -1,22 +1,23 @@
 """
-Document management utilities for handling PDF uploads and vector DB operations
+Document management for PDF uploads and vector database operations.
 """
 
 import os
 import shutil
 from pathlib import Path
 from datetime import datetime
-from typing import List, Tuple
+import json
+
 from ingestion_pipeline.pdf_ingest import load_and_chunk_documents
 from ingestion_pipeline.vector_db import get_vector_store
 from retriever.hybrid_retriever import mark_bm25_dirty
-import json
+from config import UPLOAD_DIR, REGISTRY_FILE
 
 
 class DocumentManager:
-    """Manages PDF uploads, storage, and retrieval"""
+    """Manages PDF document uploads and metadata."""
 
-    def __init__(self, upload_dir: str = "uploads", registry_file: str = "document_registry.json"):
+    def __init__(self, upload_dir: str = UPLOAD_DIR, registry_file: str = REGISTRY_FILE):
         self.upload_dir = Path(upload_dir)
         self.upload_dir.mkdir(exist_ok=True)
         self.registry_file = registry_file
@@ -35,7 +36,7 @@ class DocumentManager:
         with open(self.registry_file, 'w') as f:
             json.dump(self.registry, f, indent=2)
 
-    def upload_document(self, file_path: str, file_size: int) -> Tuple[str, int]:
+    def upload_document(self, file_path: str, file_size: int) -> tuple[str, int]:
         """Upload a PDF document to the vector store.
 
         Args:
@@ -43,7 +44,7 @@ class DocumentManager:
             file_size: Size of the file in bytes
 
         Returns:
-            Tuple of (document_name, chunks_created)
+            tuple of (document_name, chunks_created)
 
         Raises:
             ValueError: If file is not a PDF or processing fails
@@ -130,7 +131,7 @@ class DocumentManager:
         except Exception as e:
             raise ValueError(f"Failed to delete {document_name}: {str(e)}")
 
-    def list_documents(self) -> List[dict]:
+    def list_documents(self) -> list[dict]:
         """
         List all uploaded documents.
 

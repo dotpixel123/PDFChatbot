@@ -1,28 +1,24 @@
-from dotenv import load_dotenv
-import os
+"""
+Answer generation using the LLM with document context.
+"""
 
-from langchain_google_genai import ChatGoogleGenerativeAI
-
-load_dotenv()
-
-api_key = os.getenv("GOOGLE_API_KEY")
-
-llm = ChatGoogleGenerativeAI(
-    model="gemini-2.5-flash",
-    google_api_key=api_key,
-    temperature=0.2
-)
+from config import get_llm
 
 
-def generate_answer(query, chunks):
+def generate_answer(query: str, chunks: list[str]) -> str:
+    """Generate a final answer using retrieved context.
+    
+    Args:
+        query: The user's question.
+        chunks: Retrieved document chunks to use as context.
+    
+    Returns:
+        The generated answer.
     """
-    Generate final answer using retrieved chunks as context
-    """
-
+    llm = get_llm()
     context = "\n\n".join(chunks)
 
-    prompt = f"""
-You are a helpful assistant.
+    prompt = f"""You are a helpful assistant.
 
 Answer the question using ONLY the context below.
 If the answer is not contained in the context, say you don't know.
@@ -35,5 +31,4 @@ Question:
 """
 
     response = llm.invoke(prompt)
-
     return response.content

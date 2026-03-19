@@ -1,5 +1,6 @@
 """
-FastAPI routes for RAG system
+FastAPI routes for the RAG system.
+Handles document uploads, queries, and knowledge base management.
 """
 
 from fastapi import APIRouter, UploadFile, File, HTTPException
@@ -15,62 +16,46 @@ from backend.schemas import (
 from backend.document_manager import DocumentManager
 from generation.pipeline import rag_pipeline
 from ingestion_pipeline.vector_db import vector_store_is_empty
+from config import VECTOR_DB_DIR, LLM_MODEL
 
 router = APIRouter()
 doc_manager = DocumentManager(upload_dir="uploads")
 
 
-# ==================== Chat & Streaming ====================
-
-async def answer_generator(query: str, conversation_history: list = None) -> AsyncGenerator[str, None]:
-    """
-    Generate streaming answer from RAG pipeline.
-    Yields tokens as they are generated.
-    """
-    try:
-        # Run RAG pipeline to get answer
-        answer, chunks = rag_pipeline(query)
-        
-        # Stream the answer in chunks (simulate token streaming)
-        # Split into sentences for more natural streaming
-        sentences = answer.split('. ')
-        for i, sentence in enumerate(sentences):
-            chunk = sentence + ('. ' if i < len(sentences) - 1 else '')
-            yield chunk
-            
-    except Exception as e:
-        yield f"ERROR: {str(e)}"
-
+# ==================== Chat ====================
 
 @router.post("/chat")
 async def chat(request: ChatRequest):
-    """Main chat endpoint. Streams answer via Server-Sent Events.
+    """Query the knowledge base and get an answer.
     
     Args:
-        request: ChatRequest with query and optional conversation_history
+        request: ChatRequest with the user's query.
     
     Returns:
-        StreamingResponse with answer chunks
+        JSON response with the answer and source documents.
+        
+    Raises:
+        HTTPException: If database is empty or query fails.
     """
-    try:
-        # Validate query
-        if not request.query or not request.query.strip():
-            raise HTTPException(status_code=400, detail="Query cannot be empty")
-        
-        # Check if database is empty
-        if vector_store_is_empty():
-            raise HTTPException(
-                status_code=400,
-                detail="Knowledge base is empty. Please upload documents first using the /upload endpoint."
-            )
-        
-        return StreamingResponse(
-            answer_generator(request.query, request.conversation_history),
-            media_type="text/event-stream"
+    if not request.query or not request.query.strip():
+        raise HTTPException(status_code=400, detail="Query cannot be empty")
+    
+    if vector_store_is_empty():
+        raise HTTPException(
+            status_code=400,
+            detail="Knowledge base is empty. Upload documents first using /upload endpoint."
         )
     
+    try:
+        answer, chunks = rag_pipeline(request.query)
+        return {
+            "query": request.query,
+            "answer": answer,
+            "sources": chunks[:5]  # Return top 5 relevant chunks
+        }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=f"Query failed: {str(e)}")
+
 
 
 # ==================== Document Management ====================
@@ -205,18 +190,10 @@ async def rebuild_index():
 
 @router.get("/health", response_model=HealthResponse)
 async def health_check():
-    """
-    Health check endpoint. Verifies backend is running.
-    
-    Returns:
-        HealthResponse with status and model info
-    """
-    try:
-        return HealthResponse(
-            status="ok",
-            model="gemini-2.5-flash",
-            vector_db="chroma_db"
-        )
-    
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Health check failed: {str(e)}")
+    """Health check endpoint with system information."""
+    return HealthResponse(
+        status="ok",
+        model=LLM_MODEL,
+        vector_db=VECTOR_DB_DIR
+    )
+

@@ -1,30 +1,31 @@
-from dotenv import load_dotenv
-import os
+"""
+Query expansion for improving retrieval coverage.
+Generates multiple query variants to search for the same answer.
+"""
 
-from langchain_google_genai import ChatGoogleGenerativeAI
+from config import get_llm, QUERY_EXPANSION_COUNT
 
-load_dotenv()
 
-api_key = os.getenv("GOOGLE_API_KEY")
+def generate_queries(question: str, n_queries: int = QUERY_EXPANSION_COUNT) -> list[str]:
+    """Generate alternative search queries.
+    
+    Args:
+        question: The original user question.
+        n_queries: Number of alternative queries to generate.
+    
+    Returns:
+        List of expanded queries.
+    """
+    llm = get_llm()
 
-llm = ChatGoogleGenerativeAI(
-    model="gemini-2.5-flash",
-    google_api_key=api_key
-)
-
-def generate_queries(question, n_queries=3):
-
-    prompt = f"""
-Generate {n_queries} alternative search queries for the following question.
+    prompt = f"""Generate {n_queries} alternative search queries for the following question.
 Each query should capture the same intent but use different wording.
 
 Question: {question}
 
-Return each query on a new line.
-"""
+Return each query on a new line, without numbering or bullets."""
 
     response = llm.invoke(prompt)
-
     queries = response.content.split("\n")
+    return [q.strip() for q in queries if q.strip()]
 
-    return [q.strip("- ").strip() for q in queries if q.strip()]
