@@ -4,10 +4,8 @@ Handles document uploads, queries, and knowledge base management.
 """
 
 from fastapi import APIRouter, UploadFile, File, HTTPException
-from fastapi.responses import StreamingResponse
 import os
 import tempfile
-from typing import AsyncGenerator
 
 from backend.schemas import (
     ChatRequest, HealthResponse, UploadResponse, DocumentListResponse,

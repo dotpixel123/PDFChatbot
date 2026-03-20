@@ -13,7 +13,8 @@ GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 
 # Model Configuration
 LLM_MODEL = "gemini-2.5-flash"
-LLM_TEMPERATURE = 0.2
+LLM_TEMPERATURE = 0.4
+MAX_OUTPUT_TOKENS = 1024
 EMBEDDING_MODEL = "BAAI/bge-small-en-v1.5"
 RERANKER_MODEL = "BAAI/bge-reranker-base"
 
@@ -24,7 +25,7 @@ CHUNK_OVERLAP = 150
 # Retrieval Configuration
 BM25_K = 60
 HYBRID_TOP_N = 20
-RERANK_TOP_K = 5
+RERANK_TOP_K = 7
 QUERY_EXPANSION_COUNT = 3
 
 # Storage
@@ -40,5 +41,6 @@ def get_llm():
     return ChatGoogleGenerativeAI(
         model=LLM_MODEL,
         google_api_key=GOOGLE_API_KEY,
-        temperature=LLM_TEMPERATURE
+        temperature=LLM_TEMPERATURE,
+        max_output_tokens = MAX_OUTPUT_TOKENS
     )
