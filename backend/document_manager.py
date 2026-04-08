@@ -62,7 +62,7 @@ class DocumentManager:
                 shutil.copy(file_path, str(dest_path))
 
             # Load and chunk the document - pass as posix path for consistency
-            chunks = load_and_chunk_documents(dest_path.as_posix())
+            chunks = load_and_chunk_documents(str(dest_path))
             num_chunks = len(chunks)
 
             if num_chunks == 0:
